@@ -37,6 +37,19 @@ async function run() {
     // service related apis -------------
      const service_DB =client.db('service_DB')
      const serviceCollection = service_DB.collection("services")
+
+     app.get("/services", async (req,res)=>{
+           const cursor =  serviceCollection.find({})
+           const result =await cursor.toArray()
+           res.send(result)
+     })
+
+     app.post("/service", async(req,res)=>{
+        const newService = req.body;
+        const result = await serviceCollection.insertOne(newService)
+        res.send(result)
+     })
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
