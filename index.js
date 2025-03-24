@@ -1,9 +1,10 @@
+require("dotenv").config()
 const express = require("express")
 const cors = require("cors")
-require("dotenv").config()
+
 const app = express()
 const port =process.env.PORT || 5000
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
  
 
 // middleware-----------
@@ -14,7 +15,7 @@ app.use(express.json())
 
 
 
-const uri = `mongodb+srv://DB_USER:DB_PASS@cluster0.hhpkb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hhpkb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -36,13 +37,23 @@ async function run() {
     // service related apis -------------
      const service_DB =client.db('service_DB')
      const serviceCollection = service_DB.collection("services")
-
-     app.get("/services", async (req,res)=>{
-           const cursor =  serviceCollection.find({}).sort({_id:1})
+      app.get("/allData", async(req,res)=>{
+          const cursor=serviceCollection.find({})
+          const result = await cursor.toArray()
+          res.send(result)
+      })
+     app.get("/servicesForHomePage", async (req,res)=>{
+           const cursor =  serviceCollection.find({}).sort({_id:1}).limit(6)
            const result =await cursor.toArray()
            res.send(result)
      })
-
+      app.get("/allData/:id", async (req,res)=>{
+              const id = req.params.id
+              const query = {_id : new ObjectId(id)}
+              const result = await serviceCollection.findOne(query)
+              res.send(result)
+              // console.log(id)
+      })
      app.post("/service", async(req,res)=>{
         const newService = req.body;
         const result = await serviceCollection.insertOne(newService)
