@@ -37,6 +37,9 @@ async function run() {
     // service related apis -------------
      const service_DB =client.db('service_DB')
      const serviceCollection = service_DB.collection("services")
+     const collectionOfBookedServices = service_DB.collection("bookedServices")
+
+     
       app.get("/allData", async(req,res)=>{
           const cursor=serviceCollection.find({})
           const result = await cursor.toArray()
@@ -60,6 +63,13 @@ async function run() {
         res.send(result)
      })
 
+    //  bookedService related API
+     
+     app.post("/bookedServices", async(req,res)=>{
+              const bookedService = req.body;
+              const result = await collectionOfBookedServices.insertOne(bookedService)
+              res.send(result)
+     })
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
