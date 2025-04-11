@@ -70,16 +70,22 @@ async function run() {
       const result = await serviceCollection.insertOne(newService)
       res.send(result)
     })
-    app.patch("/service/:id",async(req,res)=>{
-        const id = req.params.id
-         const filter = {_id : new ObjectId(id)}
-         const updateDoc = {
-           $set:{
+    app.patch("/service/:id", async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: req.body
 
-           }
-         }
-         const result = await serviceCollection.updateOne(filter,updateDoc)
-         res.send(result)
+      }
+      const result = await serviceCollection.updateOne(filter, updateDoc)
+      res.send(result)
+    })
+
+    app.delete("/service/:id", async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
+      const result = await serviceCollection.deleteOne(filter)
+      res.send(result)
     })
 
     //  bookedService related API
