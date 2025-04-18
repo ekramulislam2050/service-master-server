@@ -119,7 +119,16 @@ async function run() {
       res.send(result)
     })
 
-    
+    app.patch("/serviceToDo/:id",async (req,res)=>{
+         const id = req.params.id
+         const filter = {_id : new ObjectId(id)}
+         const updateDoc={
+          $set:req.body
+         }
+         const result = await collectionOfBookedServices.updateOne(filter,updateDoc)
+         res.send(result)
+    })
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
