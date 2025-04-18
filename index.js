@@ -3,7 +3,7 @@ const express = require("express")
 const cors = require("cors")
 
 const app = express()
-const port = process.env.PORT || 5000
+const port = process.env.PORT || 3000
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
@@ -89,12 +89,37 @@ async function run() {
     })
 
     //  bookedService related API
+      app.get("/allDataOfBookedServices",async(req,res)=>{
+        let query = {}
+        const email = req.query.email
+        if(email){
+          query={
+            currentUserEmail:email
+            
+          }
+        }
+        const result = await collectionOfBookedServices.find(query).toArray()
+        res.send(result)
+      })
 
+      app.get("/serviceToDo",async(req,res)=>{
+        let query
+            const email = req.query.email
+            if(email){
+             query={
+                providerEmail:email
+              }
+            }
+            const result = await collectionOfBookedServices.find(query).toArray()
+            res.send(result)
+      })
     app.post("/bookedServices", async (req, res) => {
       const bookedService = req.body;
       const result = await collectionOfBookedServices.insertOne(bookedService)
       res.send(result)
     })
+
+    
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
@@ -110,3 +135,5 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`service master is running on port${port}`)
 })
+
+
