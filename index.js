@@ -43,8 +43,14 @@ async function run() {
     app.get("/allData", async (req, res) => {
       let query = {}
       const email = req.query.email
+      const serviceName = req.query.serviceName?.trim()
       if (email) {
         query = { providerEmail: email }
+      }
+      if(serviceName){
+        query={
+          serviceName:{$regex:serviceName,$options:"i"}
+        }
       }
 
       const result = await serviceCollection.find(query).toArray()
@@ -63,7 +69,14 @@ async function run() {
       // console.log(id)
     })
 
-
+    // app.get('/allData', async (req,res)=>{
+    //           const serviceName = req.query.serviceName.trim()
+    //           const query= {
+    //             serviceName:{$regex:`^${serviceName}$`,$options:"i"}
+    //           }
+    //           const result = await serviceCollection.find(query).toArray()
+    //           res.send(result)
+    // })
 
     app.post("/service", async (req, res) => {
       const newService = req.body;
