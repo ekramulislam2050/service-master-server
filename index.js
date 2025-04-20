@@ -38,7 +38,7 @@ async function run() {
     const service_DB = client.db('service_DB')
     const serviceCollection = service_DB.collection("services")
     const collectionOfBookedServices = service_DB.collection("bookedServices")
-
+    const  userCollection = service_DB.collection("userInfo")
 
     app.get("/allData", async (req, res) => {
       let query = {}
@@ -66,17 +66,10 @@ async function run() {
       const query = { _id: new ObjectId(id) }
       const result = await serviceCollection.findOne(query)
       res.send(result)
-      // console.log(id)
+   
     })
 
-    // app.get('/allData', async (req,res)=>{
-    //           const serviceName = req.query.serviceName.trim()
-    //           const query= {
-    //             serviceName:{$regex:`^${serviceName}$`,$options:"i"}
-    //           }
-    //           const result = await serviceCollection.find(query).toArray()
-    //           res.send(result)
-    // })
+  
 
     app.post("/service", async (req, res) => {
       const newService = req.body;
@@ -140,6 +133,11 @@ async function run() {
          }
          const result = await collectionOfBookedServices.updateOne(filter,updateDoc)
          res.send(result)
+    })
+
+    // user related API--------------
+    app.post("user",async(req,res)=>{
+      
     })
 
   } finally {
