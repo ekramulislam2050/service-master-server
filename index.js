@@ -136,8 +136,8 @@ async function run() {
     })
 
     // user related API--------------
-    app.post("user",async(req,res)=>{
-      
+    app.post("users",async(req,res)=>{
+          
     })
 
   } finally {
