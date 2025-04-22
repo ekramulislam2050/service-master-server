@@ -38,7 +38,7 @@ async function run() {
     const service_DB = client.db('service_DB')
     const serviceCollection = service_DB.collection("services")
     const collectionOfBookedServices = service_DB.collection("bookedServices")
-    const  userCollection = service_DB.collection("userInfo")
+    const  userCollection = service_DB.collection("usersInfo")
 
     app.get("/allData", async (req, res) => {
       let query = {}
@@ -135,9 +135,28 @@ async function run() {
          res.send(result)
     })
 
-    // user related API--------------
-    app.post("users",async(req,res)=>{
-          
+    // users related API--------------
+    app.get("/userModeAndInfo",async(req,res)=>{
+          let query = {}
+          const email = req.query.email
+          if(email){
+            query={userEmail:email}
+          }
+          const result = await userCollection.find(query).toArray()
+          res.send(result)
+    })
+    app.post("/users",async(req,res)=>{
+          const data = req.body
+          const filter = {userEmail:data.userEmail}
+          const options={upsert:true}
+          const updateDoc={
+            $set:{
+              userName:data.userName,
+              userMode:data.userMode
+            }
+          }
+           const result = await userCollection.updateOne(filter,updateDoc,options)
+           res.send(result)
     })
 
   } finally {
