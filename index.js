@@ -1,16 +1,23 @@
 require("dotenv").config()
 const express = require("express")
 const cors = require("cors")
-
+const jwt = require("jsonwebtoken")
+const cookieParser = require("cookie-parser")
 const app = express()
 const port = process.env.PORT || 3000
+const secret = process.env.JWT_SECRET?process.env.JWT_SECRET:(()=>{throw new Error("jwt secret is not found")})()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { send } = require("process")
+const { error } = require("console")
 
 
 // middleware-----------
-app.use(cors())
+app.use(cors({
+  origin:"http://localhost:5173",
+  credentials:true
+}))
 app.use(express.json())
-
+app.use(cookieParser())
 
 
 
@@ -33,6 +40,23 @@ async function run() {
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    
+    // jwt related api
+     app.post("/jwt",async (req,res)=>{
+       const{ userEmail} = req.body
+        if(!userEmail){
+          return res.status(400).send({error:"email is required to generate token"})
+        }
+       const token = jwt.sign(userEmail,secret,{expiresIn:"1h"})
+       res
+       .cookie("token",token,{
+        httpOnly:true,
+        secure:false,
+        sameSite:"lax"
+
+       })
+       .send({success:true})
+     })
 
     // service related apis -------------
     const service_DB = client.db('service_DB')
