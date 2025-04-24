@@ -43,11 +43,11 @@ async function run() {
     
     // jwt related api
      app.post("/jwt",async (req,res)=>{
-       const{ userEmail} = req.body
-        if(!userEmail){
+       const{ email} = req.body
+        if(!email){
           return res.status(400).send({error:"email is required to generate token"})
         }
-       const token = jwt.sign(userEmail,secret,{expiresIn:"1h"})
+       const token = jwt.sign({email},secret,{expiresIn:"1h"})
        res
        .cookie("token",token,{
         httpOnly:true,
@@ -85,8 +85,10 @@ async function run() {
       const result = await cursor.toArray()
       res.send(result)
     })
+
     app.get("/allData/:id", async (req, res) => {
       const id = req.params.id
+    
       const query = { _id: new ObjectId(id) }
       const result = await serviceCollection.findOne(query)
       res.send(result)
