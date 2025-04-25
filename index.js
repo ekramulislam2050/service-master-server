@@ -19,7 +19,21 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 
-
+// verifyToken----------------
+const verifyToken=(req,res,next)=>{
+    const token = req.cookies.token
+    if(!token){
+      return res.status(401).send({error:"unauthorize access"})
+    }
+    jwt.verify(token,secret,(err,decoded)=>{
+         if(err){
+          return res.status(403).send({error:"forbidden access"})
+         }
+         req.user=decoded
+         next()
+    })
+    
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.hhpkb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -47,12 +61,12 @@ async function run() {
         if(!email){
           return res.status(400).send({error:"email is required to generate token"})
         }
-       const token = jwt.sign({email},secret,{expiresIn:"1h"})
+       const token = jwt.sign({email},secret,{expiresIn:"5h"})
        res
        .cookie("token",token,{
         httpOnly:true,
         secure:false,
-        sameSite:"lax"
+        sameSite:'none'
 
        })
        .send({success:true})
@@ -86,9 +100,8 @@ async function run() {
       res.send(result)
     })
 
-    app.get("/allData/:id", async (req, res) => {
+    app.get("/allData/:id",verifyToken, async (req, res) => {
       const id = req.params.id
-    
       const query = { _id: new ObjectId(id) }
       const result = await serviceCollection.findOne(query)
       res.send(result)
@@ -97,7 +110,7 @@ async function run() {
 
   
 
-    app.post("/service", async (req, res) => {
+    app.post("/service",verifyToken, async (req, res) => {
       const newService = req.body;
       const result = await serviceCollection.insertOne(newService)
       res.send(result)
