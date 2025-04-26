@@ -61,12 +61,19 @@ async function run() {
         if(!email){
           return res.status(400).send({error:"email is required to generate token"})
         }
-       const token = jwt.sign({email},secret,{expiresIn:"5h"})
+        let token
+       try{
+        token = jwt.sign({email},secret,{expiresIn:"1h"})
+        console.log(token)
+       }
+       catch(err){
+             console.log("jwt error =>",err.message)
+       }
        res
        .cookie("token",token,{
         httpOnly:true,
         secure:false,
-        sameSite:'none'
+        sameSite:"lax"
 
        })
        .send({success:true})
@@ -78,7 +85,7 @@ async function run() {
     const collectionOfBookedServices = service_DB.collection("bookedServices")
     const  userCollection = service_DB.collection("usersInfo")
 
-    app.get("/allData", async (req, res) => {
+    app.get("/allData", verifyToken, async (req, res) => {
       let query = {}
       const email = req.query.email
       const serviceName = req.query.serviceName?.trim()
@@ -110,7 +117,7 @@ async function run() {
 
   
 
-    app.post("/service",verifyToken, async (req, res) => {
+    app.post("/service",verifyToken,async (req, res) => {
       const newService = req.body;
       const result = await serviceCollection.insertOne(newService)
       res.send(result)
