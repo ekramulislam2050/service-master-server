@@ -109,8 +109,10 @@ async function run() {
 
     app.get("/allData/:id",verifyToken, async (req, res) => {
       const id = req.params.id
+      console.log(id)
       const query = { _id: new ObjectId(id) }
       const result = await serviceCollection.findOne(query)
+      console.log(result)
       res.send(result)
    
     })
@@ -153,6 +155,13 @@ async function run() {
         const result = await collectionOfBookedServices.find(query).toArray()
         res.send(result)
       })
+
+      // app.get("/allDataOfBookedServices/:id",async(req,res)=>{
+      //       const id = req.params.id
+      //       const query = {_id : new ObjectId(id)}
+      //       const result = await collectionOfBookedServices.findOne(query)
+      //       res.send(result)
+      // })
 
       app.get("/serviceToDo",async(req,res)=>{
         let query
