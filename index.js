@@ -7,8 +7,7 @@ const app = express()
 const port = process.env.PORT || 3000
 const secret = process.env.JWT_SECRET?process.env.JWT_SECRET:(()=>{throw new Error("jwt secret is not found")})()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const { send } = require("process")
-const { error } = require("console")
+
 
 
 // middleware-----------
@@ -99,6 +98,7 @@ async function run() {
       }
 
       const result = await serviceCollection.find(query).toArray()
+    
       res.send(result)
     })
     app.get("/servicesForHomePage", async (req, res) => {
