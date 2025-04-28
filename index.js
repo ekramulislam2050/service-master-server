@@ -98,6 +98,7 @@ async function run() {
         query.providerEmail =  email 
       }
      const result = await serviceCollection.find(query).toArray()
+   
         console.log(result)
       res.send(result)
     })
