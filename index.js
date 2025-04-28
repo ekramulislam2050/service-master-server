@@ -85,22 +85,41 @@ async function run() {
     const  userCollection = service_DB.collection("usersInfo")
 
     app.get("/allData", verifyToken, async (req, res) => {
+     
+     const result = await serviceCollection.find({}).toArray()
+        console.log(result)
+      res.send(result)
+    })
+    app.get("/allDataGetByEmail", verifyToken, async (req, res) => {
       let query = {}
       const email = req.query.email
-      const serviceName = req.query.serviceName?.trim()
+      console.log("email=>",email)
       if (email) {
-        query = { providerEmail: email }
+        query.providerEmail =  email 
       }
+     const result = await serviceCollection.find(query).toArray()
+        console.log(result)
+      res.send(result)
+    })
+
+    app.get("/allDataGetByServiceName", verifyToken, async (req, res) => {
+      let query={}
+     let serviceName = req.query.serviceName
+      console.log("serviceName=>",serviceName)
       if(serviceName){
-        query={
-          serviceName:{$regex:serviceName,$options:"i"}
-        }
+         serviceName=serviceName.trim()
+      }
+    
+      if(serviceName){
+        query.serviceName={$regex:serviceName,$options:"i"}
+    
       }
 
       const result = await serviceCollection.find(query).toArray()
-    
+        console.log(result)
       res.send(result)
     })
+
     app.get("/servicesForHomePage", async (req, res) => {
       const cursor = serviceCollection.find({}).sort({ _id: 1 }).limit(6)
       const result = await cursor.toArray()
