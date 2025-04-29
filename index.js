@@ -6,35 +6,48 @@ const cookieParser = require("cookie-parser")
 const app = express()
 const port = process.env.PORT || 3000
 
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET?process.env.ACCESS_TOKEN_SECRET:(()=>{throw new Error("ACCESS_TOKEN_SECRET is not found")})()
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ? process.env.ACCESS_TOKEN_SECRET : (() => { throw new Error("ACCESS_TOKEN_SECRET is not found") })()
 
-const REFRESH_TOKEN_SECRET=process.env.REFRESH_TOKEN_SECRET?process.env.REFRESH_TOKEN_SECRET:(()=>{throw new Error("REFRESH_TOKEN_SECRET is not found")})()
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET ? process.env.REFRESH_TOKEN_SECRET : (() => { throw new Error("REFRESH_TOKEN_SECRET is not found") })()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { error } = require("console")
 
 
 
 // middleware-----------
 app.use(cors({
-  origin:"http://localhost:5173",
-  credentials:true
+  origin: "http://localhost:5173",
+  credentials: true
 }))
 app.use(express.json())
 app.use(cookieParser())
 
+// token generator----------
+const accessTokenGenerator = (email) => {
+  const accessToken = jwt.sign({ email }, ACCESS_TOKEN_SECRET, { expiresIn: "1h" })
+  console.log("accessToken=>", accessToken)
+  return accessToken
+}
+const refreshTokenGenerator = (email) => {
+  const refreshToken = jwt.sign({ email }, REFRESH_TOKEN_SECRET, { expiresIn: "1d" })
+  console.log("refreshToken", refreshToken)
+  return refreshToken
+}
+
 // verifyToken----------------
-const verifyToken=(req,res,next)=>{
-    const accessToken = req.cookies.accessToken
-    if(!token){
-      return res.status(401).send({error:"unauthorize access"})
+const verifyToken = (req, res, next) => {
+  const accessToken = req.cookies.accessToken
+  if (!accessToken) {
+    return res.status(401).send({ error: "unauthorize access" })
+  }
+  jwt.verify(accessToken, ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).send({ error: "forbidden access" })
     }
-    jwt.verify(accessToken,ACCESS_TOKEN_SECRET,(err,decoded)=>{
-         if(err){
-          return res.status(403).send({error:"forbidden access"})
-         }
-         req.user=decoded
-         next()
-    })
-    
+    req.user = decoded
+    next()
+  })
+
 }
 
 
@@ -56,82 +69,99 @@ async function run() {
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    
+
     // jwt related api
-     app.post("/jwt",async (req,res)=>{
-       const{ email} = req.body
-        if(!email){
-          return res.status(400).send({error:"email is required to generate token"})
+    app.post("/jwt", async (req, res) => {
+      const { email } = req.body
+      if (!email) {
+        return res.status(400).send({ error: "email is required to generate token" })
+      }
+      
+      try {
+
+        const accessToken=accessTokenGenerator(email)
+        const refreshToken=refreshTokenGenerator(email)
+        res
+        .cookie("accessToken", accessToken, {
+          httpOnly: true,
+          secure: false,
+          sameSite: "lax"
+
+        })
+        .cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: false,
+          sameSite: "lax"
+        })
+        .send({ success: true })
+      }
+      catch (err) {
+        console.log("jwt error =>", err.message)
+      }
+      
+    })
+
+    app.post("/refreshToken", async (req, res) => {
+      const refreshToken = req?.cookies?.refreshToken
+      if (!refreshToken) {
+        return res.status(401).send({ error: "refresh token is unauthorize access" })
+      }
+      jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+          res.status(403).send({ error: "forbidden access" })
         }
-        let accessToken
-        let refreshToken
-       try{
-
-        accessToken = jwt.sign({email},ACCESS_TOKEN_SECRET,{expiresIn:"1h"})
-        console.log("accessToken=>",accessToken)
-
-        refreshToken = jwt.sign({email},REFRESH_TOKEN_SECRET,{expiresIn:"1d"})
-        console.log("refreshToken",refreshToken)
-
-       }
-       catch(err){
-             console.log("jwt error =>",err.message)
-       }
-       res
-       .cookie("accessToken",accessToken,{
-        httpOnly:true,
-        secure:false,
-        sameSite:"lax"
-
-       })
-       .cookie("refreshToken",refreshToken,{
-        httpOnly:true,
-        secure:false,
-        sameSite:"lax"
-       })
-       .send({success:true})
-     })
+        const email = decoded.email
+        const newAccessToken=accessTokenGenerator(email)
+        res
+        .cookie("accessToken",newAccessToken,{
+          httpOnly:true,
+          secure:false,
+          sameSite:"lax"
+        })
+        .send({success:true})
+      })
+    })
 
     // service related apis -------------
     const service_DB = client.db('service_DB')
     const serviceCollection = service_DB.collection("services")
     const collectionOfBookedServices = service_DB.collection("bookedServices")
-    const  userCollection = service_DB.collection("usersInfo")
+    const userCollection = service_DB.collection("usersInfo")
 
     app.get("/allData", verifyToken, async (req, res) => {
-     
-     const result = await serviceCollection.find({}).toArray()
-        console.log(result)
+
+      const result = await serviceCollection.find({}).toArray()
+      console.log(result)
       res.send(result)
     })
     app.get("/allDataGetByEmail", verifyToken, async (req, res) => {
       let query = {}
       const email = req.query.email
-      console.log("email=>",email)
+      console.log("email=>", email)
       if (email) {
-        query.providerEmail =  email 
+        query.providerEmail = email
       }
-     const result = await serviceCollection.find(query).toArray()
-   
-        console.log(result)
+      const result = await serviceCollection.find(query).toArray()
+
+      console.log(result)
       res.send(result)
     })
 
     app.get("/allDataGetByServiceName", verifyToken, async (req, res) => {
-      let query={}
-     let serviceName = req.query.serviceName
-      console.log("serviceName=>",serviceName)
-      if(serviceName){
-         serviceName=serviceName.trim()
+      let query = {}
+      let serviceName = req.query.serviceName
+      console.log("serviceName=>", serviceName)
+      if (serviceName) {
+        serviceName = serviceName.trim()
       }
-    
-      if(serviceName){
-        query.serviceName={$regex:serviceName,$options:"i"}
-    
+
+      if (serviceName) {
+        query.serviceName = { $regex: serviceName, $options: "i" }
+
       }
 
       const result = await serviceCollection.find(query).toArray()
-        console.log(result)
+      console.log(result)
       res.send(result)
     })
 
@@ -141,19 +171,19 @@ async function run() {
       res.send(result)
     })
 
-    app.get("/allData/:id",verifyToken, async (req, res) => {
+    app.get("/allData/:id", verifyToken, async (req, res) => {
       const id = req.params.id
       console.log(id)
       const query = { _id: new ObjectId(id) }
       const result = await serviceCollection.findOne(query)
       console.log(result)
       res.send(result)
-   
+
     })
 
-  
 
-    app.post("/service",verifyToken,async (req, res) => {
+
+    app.post("/service", verifyToken, async (req, res) => {
       const newService = req.body;
       const result = await serviceCollection.insertOne(newService)
       res.send(result)
@@ -177,75 +207,75 @@ async function run() {
     })
 
     //  bookedService related API
-      app.get("/allDataOfBookedServices",async(req,res)=>{
-        let query = {}
-        const email = req.query.email
-        if(email){
-          query={
-            currentUserEmail:email
-            
-          }
+    app.get("/allDataOfBookedServices", async (req, res) => {
+      let query = {}
+      const email = req.query.email
+      if (email) {
+        query = {
+          currentUserEmail: email
+
         }
-        const result = await collectionOfBookedServices.find(query).toArray()
-        res.send(result)
-      })
+      }
+      const result = await collectionOfBookedServices.find(query).toArray()
+      res.send(result)
+    })
 
-      // app.get("/allDataOfBookedServices/:id",async(req,res)=>{
-      //       const id = req.params.id
-      //       const query = {_id : new ObjectId(id)}
-      //       const result = await collectionOfBookedServices.findOne(query)
-      //       res.send(result)
-      // })
+    // app.get("/allDataOfBookedServices/:id",async(req,res)=>{
+    //       const id = req.params.id
+    //       const query = {_id : new ObjectId(id)}
+    //       const result = await collectionOfBookedServices.findOne(query)
+    //       res.send(result)
+    // })
 
-      app.get("/serviceToDo",async(req,res)=>{
-        let query
-            const email = req.query.email
-            if(email){
-             query={
-                providerEmail:email
-              }
-            }
-            const result = await collectionOfBookedServices.find(query).toArray()
-            res.send(result)
-      })
+    app.get("/serviceToDo", async (req, res) => {
+      let query
+      const email = req.query.email
+      if (email) {
+        query = {
+          providerEmail: email
+        }
+      }
+      const result = await collectionOfBookedServices.find(query).toArray()
+      res.send(result)
+    })
     app.post("/bookedServices", async (req, res) => {
       const bookedService = req.body;
       const result = await collectionOfBookedServices.insertOne(bookedService)
       res.send(result)
     })
 
-    app.patch("/serviceToDo/:id",async (req,res)=>{
-         const id = req.params.id
-         const filter = {_id : new ObjectId(id)}
-         const updateDoc={
-          $set:req.body
-         }
-         const result = await collectionOfBookedServices.updateOne(filter,updateDoc)
-         res.send(result)
+    app.patch("/serviceToDo/:id", async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: req.body
+      }
+      const result = await collectionOfBookedServices.updateOne(filter, updateDoc)
+      res.send(result)
     })
 
     // users related API--------------
-    app.get("/userModeAndInfo",async(req,res)=>{
-          let query = {}
-          const email = req.query.email
-          if(email){
-            query={userEmail:email}
-          }
-          const result = await userCollection.find(query).toArray()
-          res.send(result)
+    app.get("/userModeAndInfo", async (req, res) => {
+      let query = {}
+      const email = req.query.email
+      if (email) {
+        query = { userEmail: email }
+      }
+      const result = await userCollection.find(query).toArray()
+      res.send(result)
     })
-    app.post("/users",async(req,res)=>{
-          const data = req.body
-          const filter = {userEmail:data.userEmail}
-          const options={upsert:true}
-          const updateDoc={
-            $set:{
-              userName:data.userName,
-              userMode:data.userMode
-            }
-          }
-           const result = await userCollection.updateOne(filter,updateDoc,options)
-           res.send(result)
+    app.post("/users", async (req, res) => {
+      const data = req.body
+      const filter = { userEmail: data.userEmail }
+      const options = { upsert: true }
+      const updateDoc = {
+        $set: {
+          userName: data.userName,
+          userMode: data.userMode
+        }
+      }
+      const result = await userCollection.updateOne(filter, updateDoc, options)
+      res.send(result)
     })
 
   } finally {
