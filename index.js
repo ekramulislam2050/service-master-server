@@ -5,7 +5,10 @@ const jwt = require("jsonwebtoken")
 const cookieParser = require("cookie-parser")
 const app = express()
 const port = process.env.PORT || 3000
-const secret = process.env.JWT_SECRET?process.env.JWT_SECRET:(()=>{throw new Error("jwt secret is not found")})()
+
+const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET?process.env.ACCESS_TOKEN_SECRET:(()=>{throw new Error("ACCESS_TOKEN_SECRET is not found")})()
+
+const REFRESH_TOKEN_SECRET=process.env.REFRESH_TOKEN_SECRET?process.env.REFRESH_TOKEN_SECRET:(()=>{throw new Error("REFRESH_TOKEN_SECRET is not found")})()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
@@ -20,11 +23,11 @@ app.use(cookieParser())
 
 // verifyToken----------------
 const verifyToken=(req,res,next)=>{
-    const token = req.cookies.token
+    const accessToken = req.cookies.accessToken
     if(!token){
       return res.status(401).send({error:"unauthorize access"})
     }
-    jwt.verify(token,secret,(err,decoded)=>{
+    jwt.verify(accessToken,ACCESS_TOKEN_SECRET,(err,decoded)=>{
          if(err){
           return res.status(403).send({error:"forbidden access"})
          }
@@ -60,20 +63,31 @@ async function run() {
         if(!email){
           return res.status(400).send({error:"email is required to generate token"})
         }
-        let token
+        let accessToken
+        let refreshToken
        try{
-        token = jwt.sign({email},secret,{expiresIn:"1h"})
-        console.log(token)
+
+        accessToken = jwt.sign({email},ACCESS_TOKEN_SECRET,{expiresIn:"1h"})
+        console.log("accessToken=>",accessToken)
+
+        refreshToken = jwt.sign({email},REFRESH_TOKEN_SECRET,{expiresIn:"1d"})
+        console.log("refreshToken",refreshToken)
+
        }
        catch(err){
              console.log("jwt error =>",err.message)
        }
        res
-       .cookie("token",token,{
+       .cookie("accessToken",accessToken,{
         httpOnly:true,
         secure:false,
         sameSite:"lax"
 
+       })
+       .cookie("refreshToken",refreshToken,{
+        httpOnly:true,
+        secure:false,
+        sameSite:"lax"
        })
        .send({success:true})
      })
