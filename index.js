@@ -220,13 +220,6 @@ async function run() {
       res.send(result)
     })
 
-    // app.get("/allDataOfBookedServices/:id",async(req,res)=>{
-    //       const id = req.params.id
-    //       const query = {_id : new ObjectId(id)}
-    //       const result = await collectionOfBookedServices.findOne(query)
-    //       res.send(result)
-    // })
-
     app.get("/serviceToDo", async (req, res) => {
       let query
       const email = req.query.email
@@ -276,6 +269,18 @@ async function run() {
       }
       const result = await userCollection.updateOne(filter, updateDoc, options)
       res.send(result)
+    })
+
+    // pagination-------------
+    app.get('/serviceCount',async(req,res)=>{
+      const totalItems = await serviceCollection.estimatedDocumentCount()
+      res.send({totalItems})
+    })
+    app.get("/allDataForPagination",async(req,res)=>{
+         const currentPage = parseInt(req.query.currentPage)
+         const itemsPerPage = parseInt(req.query.itemsPerPage)
+         const result = await serviceCollection.find({}).skip(currentPage * itemsPerPage).limit(itemsPerPage).toArray()
+         res.send(result)
     })
 
   } finally {
