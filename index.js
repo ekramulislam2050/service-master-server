@@ -134,6 +134,7 @@ async function run() {
       console.log(result)
       res.send(result)
     })
+
     app.get("/allDataGetByEmail", verifyToken, async (req, res) => {
       let query = {}
       const email = req.query.email
@@ -279,7 +280,7 @@ async function run() {
     app.get("/allDataForPagination",async(req,res)=>{
          const currentPage = parseInt(req.query.currentPage)
          const itemsPerPage = parseInt(req.query.itemsPerPage)
-         const result = await serviceCollection.find({}).skip(currentPage * itemsPerPage).limit(itemsPerPage).toArray()
+         const result = await serviceCollection.find({}).skip((currentPage-1) * itemsPerPage).limit(itemsPerPage).toArray()
          res.send(result)
     })
 
