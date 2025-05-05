@@ -10,13 +10,17 @@ const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ? process.env.ACCESS
 
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET ? process.env.REFRESH_TOKEN_SECRET : (() => { throw new Error("REFRESH_TOKEN_SECRET is not found") })()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const { error } = require("console")
+
 
 
 
 // middleware-----------
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin:[ 
+    "http://localhost:5173",
+    "https://service-master-1db71.web.app",
+    "https://service-master-1db71.firebaseapp.com"
+    ],
   credentials: true
 }))
 app.use(express.json())
@@ -65,9 +69,9 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
     // jwt related api
@@ -84,14 +88,14 @@ async function run() {
         res
         .cookie("accessToken", accessToken, {
           httpOnly: true,
-          secure: false,
-          sameSite: "lax"
+          secure:process.env.NODE_ENV === "production",
+          sameSite:process.env.NODE_ENV === "production" ? "none":"strict"
 
         })
         .cookie("refreshToken", refreshToken, {
           httpOnly: true,
-          secure: false,
-          sameSite: "lax"
+          secure: process.env.NODE_ENV === "production" ,
+          sameSite: process.env.NODE_ENV === "production" ? "none":"strict"
         })
         .send({ success: true })
       }
@@ -108,19 +112,39 @@ async function run() {
       }
       jwt.verify(refreshToken, REFRESH_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-          res.status(403).send({ error: "forbidden access" })
+          return res.status(403).send({ error: "forbidden access" })
         }
         const email = decoded.email
         const newAccessToken=accessTokenGenerator(email)
         res
         .cookie("accessToken",newAccessToken,{
           httpOnly:true,
-          secure:false,
-          sameSite:"lax"
+          secure:process.env.NODE_ENV === "production",
+          sameSite:process.env.NODE_ENV === "production" ? "none" : "strict"
         })
         .send({success:true})
       })
     })
+    
+     app.post("/logOut",async (req,res)=>{
+            const {email} = req.body
+            console.log(email)
+            if(!email){
+              return res.status(400).send({error:"user data is missing"})
+            }
+            res
+            .clearCookie('accessToken',{
+              httpOnly:true,
+              secure:process.env.NODE_ENV === "production",
+              sameSite:process.env.NODE_ENV === "production"?"none":"strict"
+            })
+            .clearCookie("refreshToken",{
+              httpOnly:true,
+              secure:process.env.NODE_ENV === "production",
+              sameSite:process.env.NODE_ENV === "production"?"none":"strict"
+            })
+            .send({success:true})
+     })
 
     // service related apis -------------
     const service_DB = client.db('service_DB')
